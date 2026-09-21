@@ -1,0 +1,21 @@
+*.iml
+.gradle
+local.properties
+.idea
+.DS_Store
+build/
+captures/
+.externalNativeBuild
+.cxx
+*.hprof
+.kotlin/
+
+# Xcode / iOS
+iosApp/build/
+*.xcuserstate
+**/xcuserdata/
+iosApp/Pods/
+iosApp/*.xcworkspace
+
+# Compose Multiplatform
+/composeApp/build/
