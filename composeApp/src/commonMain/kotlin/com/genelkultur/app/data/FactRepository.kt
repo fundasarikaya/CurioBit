@@ -14,6 +14,7 @@ import kotlinx.datetime.todayIn
 
 /** Bir bildirimde gösterilecek kısa metnin karakter sınırı. */
 private const val SHORT_TEXT_MAX_CHARS = 140
+private const val TITLE_MAX_CHARS = 48
 private const val HISTORY_WINDOW_DAYS = 7
 
 class FactRepository(
@@ -72,23 +73,29 @@ class FactRepository(
     }
 
     private fun OnThisDayEvent.toFactOrNull(shownDateEpochDay: Long): Fact? {
-        val page = pages.firstOrNull() ?: return null
+        if (text.isBlank()) return null
+        val page = pages.firstOrNull()
         val year = year?.toString().orEmpty()
         val fullText = if (year.isNotEmpty()) "$year — $text" else text
-        val displayTitle = page.title.replace('_', ' ')
+        // Başlık, olayla alakasız olabilen bir Wikipedia sayfa adı yerine
+        // olayın kendi metninden türetilir; böylece her zaman konuyla ilgili olur.
+        val displayTitle = text.truncateTo(TITLE_MAX_CHARS)
+        val sourceUrl = page?.content_urls?.desktop?.page
+            ?: page?.let { "https://tr.wikipedia.org/wiki/${it.title}" }
+            ?: "https://tr.wikipedia.org/wiki/Vikipedi:Bug%C3%BCn"
         return Fact(
-            id = "$shownDateEpochDay-${page.title}-$year".hashCode().toString(),
+            id = "$shownDateEpochDay-$text-$year".hashCode().toString(),
             title = displayTitle,
-            shortText = fullText.truncateToShort(),
+            shortText = fullText.truncateTo(SHORT_TEXT_MAX_CHARS),
             fullText = fullText,
-            sourceUrl = page.content_urls?.desktop?.page ?: "https://tr.wikipedia.org/wiki/${page.title}",
+            sourceUrl = sourceUrl,
             shownDateEpochDay = shownDateEpochDay
         )
     }
 
-    private fun String.truncateToShort(): String {
-        if (length <= SHORT_TEXT_MAX_CHARS) return this
-        val cut = substring(0, SHORT_TEXT_MAX_CHARS)
+    private fun String.truncateTo(maxChars: Int): String {
+        if (length <= maxChars) return this
+        val cut = substring(0, maxChars)
         val lastSpace = cut.lastIndexOf(' ')
         val trimmed = if (lastSpace > 0) cut.substring(0, lastSpace) else cut
         return "$trimmed…"
