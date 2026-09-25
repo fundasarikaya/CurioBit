@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import com.genelkultur.app.data.DatabaseDriverFactory
 
@@ -14,6 +15,8 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* no-op */ }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Durum çubuğu simgeleri açık temada koyu, koyu temada açık renkte çizilir.
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
