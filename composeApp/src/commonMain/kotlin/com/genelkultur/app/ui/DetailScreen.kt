@@ -1,5 +1,8 @@
 package com.genelkultur.app.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,14 +35,19 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.genelkultur.app.data.Fact
 import com.genelkultur.app.data.Reaction
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 @Composable
 fun DetailScreen(
@@ -189,8 +197,32 @@ private fun ReactionStamp(
     onClick: () -> Unit
 ) {
     val contentColor = if (selected) Color.White else accent
+    val scale = remember { Animatable(1f) }
+    val rotation = remember { Animatable(0f) }
+    LaunchedEffect(selected) {
+        if (selected) {
+            coroutineScope {
+                launch {
+                    scale.snapTo(1.4f)
+                    scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 260f))
+                }
+                launch {
+                    rotation.snapTo(-12f)
+                    rotation.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 260f))
+                }
+            }
+        } else {
+            scale.snapTo(1f)
+            rotation.snapTo(0f)
+        }
+    }
     Row(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+                rotationZ = rotation.value
+            }
             .clip(RoundedCornerShape(6.dp))
             .background(if (selected) accent else Color.Transparent)
             .border(width = 1.5.dp, color = accent, shape = RoundedCornerShape(6.dp))
