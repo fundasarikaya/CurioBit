@@ -8,15 +8,15 @@ class WikipediaApi(
     private val httpClient: HttpClient = createHttpClient()
 ) {
     /**
-     * Fetches "bugün" (On This Day) events for the given month/day from the
-     * Turkish Wikipedia REST API.
+     * Fetches "bugün" (On This Day) events, births and deaths for the given
+     * month/day from the Turkish Wikipedia REST API.
      */
-    suspend fun fetchOnThisDay(month: Int, day: Int): List<OnThisDayEvent> {
+    suspend fun fetchOnThisDay(month: Int, day: Int): OnThisDayResponse {
         val mm = month.toString().padStart(2, '0')
         val dd = day.toString().padStart(2, '0')
         val response: OnThisDayResponse = httpClient
-            .get("https://tr.wikipedia.org/api/rest_v1/feed/onthisday/events/$mm/$dd")
+            .get("https://tr.wikipedia.org/api/rest_v1/feed/onthisday/all/$mm/$dd")
             .body()
-        return response.events
+        return response
     }
 }

@@ -19,6 +19,7 @@ private const val TITLE_MAX_CHARS = 48
 private const val LONG_TEXT_MAX_CHARS = 600
 private const val HISTORY_WINDOW_DAYS = 7
 private const val ERA_KEY = "era"
+private val KIND_WEIGHTS = mapOf(EntryKind.EVENT to 2, EntryKind.BIRTH to 1, EntryKind.DEATH to 1)
 
 class FactRepository(
     driverFactory: DatabaseDriverFactory,
@@ -108,7 +109,7 @@ class FactRepository(
     private suspend fun pick(requireUnseen: Boolean, strictEra: Boolean): PickResult =
         withContext(Dispatchers.Default) {
             val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-            val events = try {
+            val response = try {
                 api.fetchOnThisDay(today.monthNumber, today.dayOfMonth)
             } catch (e: Exception) {
                 return@withContext PickResult.Offline
@@ -117,22 +118,32 @@ class FactRepository(
             val seenIds = queries.selectAllIds().executeAsList().toSet()
             val avoidedTopics = queries.selectAvoidedTopics().executeAsList().toSet()
 
-            val candidates = events.mapNotNull { event -> event.toFactOrNull(today.toEpochDays().toLong()) }
-            val unseen = candidates.filter { it.id !in seenIds }
+            val day = today.toEpochDays().toLong()
+            val entries = response.events.map { EntryKind.EVENT to it } +
+                response.births.map { EntryKind.BIRTH to it } +
+                response.deaths.map { EntryKind.DEATH to it }
+            val candidates = entries.mapNotNull { (kind, entry) ->
+                entry.toFactOrNull(day, kind)?.let { kind to it }
+            }
+            val unseen = candidates.filter { (_, fact) -> fact.id !in seenIds }
             val pool = when {
                 unseen.isNotEmpty() -> unseen
                 requireUnseen -> return@withContext PickResult.NoneLeft
                 else -> candidates
             }
             // Önce seçilen dönemdekiler; hiç yoksa ya dur (strictEra) ya da tüm dönemlere dön.
-            val inEra = pool.filter { era.contains(yearOf(it.fullText)) }
+            val inEra = pool.filter { (_, fact) -> era.contains(yearOf(fact.fullText)) }
             val eraPool = when {
                 inEra.isNotEmpty() -> inEra
                 strictEra -> return@withContext PickResult.NoneLeft
                 else -> pool
             }
+            // Doğumlar olaylardan çok daha fazla; önce türü ağırlıkla seçip sonra o türden
+            // seçiyoruz ki uygulama bir doğum günü listesine dönmesin.
+            val byKind = eraPool.groupBy({ it.first }, { it.second })
+            val kind = pickWeighted(byKind.keys) ?: return@withContext PickResult.NoneLeft
             // "Dislike" edilen konularla eşleşenler tamamen elenmez, sadece öncelik dışına atılır.
-            val (preferred, deprioritized) = eraPool.partition { it.topic !in avoidedTopics }
+            val (preferred, deprioritized) = byKind.getValue(kind).partition { it.topic !in avoidedTopics }
             val chosen = (preferred.ifEmpty { deprioritized }).randomOrNull()
                 ?: return@withContext PickResult.NoneLeft
 
@@ -153,10 +164,21 @@ class FactRepository(
         queries.deleteOlderThan(epochDay)
     }
 
-    private fun OnThisDayEvent.toFactOrNull(shownDateEpochDay: Long): Fact? {
+    /** Olaylar 2, doğumlar ve ölümler 1 ağırlıkla; yalnızca elde bulunan türler arasından. */
+    private fun pickWeighted(kinds: Set<EntryKind>): EntryKind? {
+        val weighted = kinds.flatMap { kind -> List(KIND_WEIGHTS.getValue(kind)) { kind } }
+        return weighted.randomOrNull()
+    }
+
+    private fun OnThisDayEvent.toFactOrNull(shownDateEpochDay: Long, kind: EntryKind): Fact? {
         if (text.isBlank()) return null
         val page = pages.firstOrNull()
         val year = year?.toString().orEmpty()
+        val text = when (kind) {
+            EntryKind.EVENT -> text
+            EntryKind.BIRTH -> personSentence(text, "doğdu")
+            EntryKind.DEATH -> personSentence(text, "hayatını kaybetti")
+        }
         val fullText = if (year.isNotEmpty()) "$year — $text" else text
         // Başlık, olayla alakasız olabilen bir Wikipedia sayfa adı yerine
         // olayın kendi metninden türetilir; böylece her zaman konuyla ilgili olur.
@@ -169,7 +191,11 @@ class FactRepository(
         // Wikipedia sayfasının özetini (varsa) kullanıyoruz; tam makale kaynak linkinde.
         val longText = page?.extract?.takeIf { it.isNotBlank() }?.truncateTo(LONG_TEXT_MAX_CHARS) ?: fullText
         return Fact(
-            id = "$shownDateEpochDay-$text-$year".hashCode().toString(),
+            // Olayların kimliği eski biçimde kalır ki daha önce gösterilenler tekrar gelmesin.
+            id = when (kind) {
+                EntryKind.EVENT -> "$shownDateEpochDay-$text-$year"
+                else -> "$shownDateEpochDay-$kind-$text-$year"
+            }.hashCode().toString(),
             title = displayTitle,
             shortText = fullText.truncateTo(SHORT_TEXT_MAX_CHARS),
             fullText = fullText,
@@ -178,6 +204,20 @@ class FactRepository(
             topic = topic,
             shownDateEpochDay = shownDateEpochDay
         )
+    }
+
+    /**
+     * Vikipedi'nin "İsim, açıklama (d. 1900)" biçimindeki doğum/ölüm kaydını cümleye
+     * çevirir: "İsim doğdu: açıklama (d. 1900)". Açıklamalar tutarsız olduğundan
+     * ("… devlet adamıydı" gibi) ismi başa alan tek bir kalıp kullanılır.
+     */
+    private fun personSentence(raw: String, verb: String): String {
+        val text = raw.replace('\u00A0', ' ').trim()
+        val comma = text.indexOf(", ")
+        if (comma <= 0) return "$text $verb."
+        val name = text.substring(0, comma).trim()
+        val description = text.substring(comma + 2).trim()
+        return "$name $verb: $description"
     }
 
     private fun String.truncateTo(maxChars: Int): String {

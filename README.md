@@ -1,8 +1,8 @@
 # CurioBit
 
 Her gün dünya tarihinden küçük bir kırıntı. CurioBit, Türkçe Vikipedi'nin
-"Tarihte bugün" verisinden seçtiği kısa bir bilgiyi günde 1–2 kez bildirim
-olarak gönderir. Bildirime dokununca bilginin ayrıntısı ve Vikipedi kaynağı
+"Tarihte bugün" verisinden (olaylar, doğumlar ve ölümler) seçtiği kısa bir
+bilgiyi günde 1–2 kez bildirim olarak gönderir. Bildirime dokununca bilginin ayrıntısı ve Vikipedi kaynağı
 açılır. Aynı bilgi iki kez gösterilmez.
 
 Arayüz eski bir gazete sayfası gibi tasarlandı: sepya kâğıt, mürekkep rengi
@@ -14,6 +14,10 @@ yazılar ve tek bir pas kahvesi vurgu rengi. Açık ve koyu tema desteklenir.
 - **Detay:** Olayın tam metni, ilgili Vikipedi özeti ve makaleye bağlantı.
 - **Beğen / beğenme:** Beğenilen bilgiler favorilere eklenir. Beğenilmeyen bir
   bilginin konusu sonraki seçimlerde geri plana atılır.
+- **Başka bir bilgi:** Günün bilgisi gün boyunca sabit kalır; yenisi butonla
+  ya da sayfayı aşağı çekerek istenir.
+- **Dönem seçimi:** Bilgiler tüm yıllardan ya da seçilen dönemden (2010+,
+  2000–09, 1900–99, 1900 öncesi) gelir. Bildirimler de seçime uyar.
 - **Arşiv:** Son 7 günde gösterilen bilgiler ve tüm favoriler.
 
 ## Teknolojiler
@@ -51,7 +55,9 @@ iosApp/             Xcode projesi
 ## Veri kaynağı
 
 Bilgiler [Türkçe Vikipedi](https://tr.wikipedia.org/)'nin "Tarihte bugün"
-REST API'sinden (`/api/rest_v1/feed/onthisday/events`) alınır. Vikipedi
+REST API'sinden (`/api/rest_v1/feed/onthisday/all`) alınır. Olaylar, doğumlar
+ve ölümler 2:1:1 ağırlıkla seçilir; doğumlar sayıca çok olduğu için bu denge
+gözetilir. Vikipedi
 içeriği [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)
 lisansı altındadır.
 

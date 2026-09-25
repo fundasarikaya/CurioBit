@@ -3,12 +3,19 @@ package com.genelkultur.app.data
 import kotlinx.serialization.Serializable
 
 /**
- * tr.wikipedia.org REST API — /api/rest_v1/feed/onthisday/events/{mm}/{dd}
+ * tr.wikipedia.org REST API — /api/rest_v1/feed/onthisday/all/{mm}/{dd}
  */
 @Serializable
 data class OnThisDayResponse(
-    val events: List<OnThisDayEvent> = emptyList()
+    val events: List<OnThisDayEvent> = emptyList(),
+    val births: List<OnThisDayEvent> = emptyList(),
+    val deaths: List<OnThisDayEvent> = emptyList()
 )
+
+/** "Tarihte bugün" kaydının türü. */
+enum class EntryKind {
+    EVENT, BIRTH, DEATH
+}
 
 @Serializable
 data class OnThisDayEvent(
