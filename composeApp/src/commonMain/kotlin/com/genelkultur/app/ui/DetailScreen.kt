@@ -152,42 +152,59 @@ private fun ReactionButtons(
     accent: Color,
     onReact: (Reaction) -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        ReactionButton(
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        ReactionStamp(
             icon = Icons.Filled.ThumbUp,
+            label = "BEĞENDİM",
             contentDescription = "Beğen",
             selected = reaction == Reaction.LIKE,
             accent = accent,
+            modifier = Modifier.weight(1f),
             onClick = { onReact(if (reaction == Reaction.LIKE) Reaction.NONE else Reaction.LIKE) }
         )
-        ReactionButton(
+        ReactionStamp(
             icon = Icons.Filled.ThumbDown,
+            label = "BEĞENMEDİM",
             contentDescription = "Beğenme",
             selected = reaction == Reaction.DISLIKE,
             accent = accent,
+            modifier = Modifier.weight(1f),
             onClick = { onReact(if (reaction == Reaction.DISLIKE) Reaction.NONE else Reaction.DISLIKE) }
         )
     }
 }
 
+/** Kağıda basılmış bir mühür/damga hissi veren, köşeleri az yuvarlatılmış tepki butonu. */
 @Composable
-private fun ReactionButton(
+private fun ReactionStamp(
     icon: ImageVector,
+    label: String,
     contentDescription: String,
     selected: Boolean,
     accent: Color,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     val contentColor = if (selected) Color.White else accent
-    Box(
-        modifier = Modifier
-            .size(48.dp)
-            .clip(CircleShape)
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(6.dp))
             .background(if (selected) accent else Color.Transparent)
-            .border(width = 1.dp, color = accent, shape = CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+            .border(width = 1.5.dp, color = accent, shape = RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = contentColor, modifier = Modifier.size(22.dp))
+        Icon(icon, contentDescription = contentDescription, tint = contentColor, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = contentColor
+        )
     }
 }
