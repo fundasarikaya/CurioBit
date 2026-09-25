@@ -5,14 +5,20 @@ CREATE TABLE SeenFact (
     fullText TEXT NOT NULL,
     longText TEXT NOT NULL,
     sourceUrl TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    reaction TEXT NOT NULL DEFAULT 'NONE',
     shownDateEpochDay INTEGER NOT NULL
 );
 
 CREATE INDEX seenFact_shownDate ON SeenFact(shownDateEpochDay);
 
+CREATE TABLE AvoidedTopic (
+    topic TEXT NOT NULL PRIMARY KEY
+);
+
 insertFact:
-INSERT OR REPLACE INTO SeenFact(id, title, shortText, fullText, longText, sourceUrl, shownDateEpochDay)
-VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT OR IGNORE INTO SeenFact(id, title, shortText, fullText, longText, sourceUrl, topic, shownDateEpochDay)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 selectAllIds:
 SELECT id FROM SeenFact;
@@ -22,8 +28,25 @@ SELECT * FROM SeenFact
 WHERE shownDateEpochDay >= :sinceEpochDay
 ORDER BY shownDateEpochDay DESC, id DESC;
 
+selectFavorites:
+SELECT * FROM SeenFact
+WHERE reaction = 'LIKE'
+ORDER BY shownDateEpochDay DESC, id DESC;
+
 selectById:
 SELECT * FROM SeenFact WHERE id = ?;
 
 deleteOlderThan:
 DELETE FROM SeenFact WHERE shownDateEpochDay < :epochDay;
+
+updateReaction:
+UPDATE SeenFact SET reaction = :reaction WHERE id = :id;
+
+addAvoidedTopic:
+INSERT OR IGNORE INTO AvoidedTopic(topic) VALUES (?);
+
+removeAvoidedTopic:
+DELETE FROM AvoidedTopic WHERE topic = ?;
+
+selectAvoidedTopics:
+SELECT topic FROM AvoidedTopic;

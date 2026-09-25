@@ -1,6 +1,10 @@
 package com.genelkultur.app.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,11 +16,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,14 +34,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.genelkultur.app.data.Fact
+import com.genelkultur.app.data.Reaction
 
 @Composable
 fun DetailScreen(
     fact: Fact?,
     onBack: () -> Unit,
-    onOpenSource: (String) -> Unit
+    onOpenSource: (String) -> Unit,
+    onReact: (Reaction) -> Unit
 ) {
     val accent = fact?.let { accentColorFor(it.id) } ?: MaterialTheme.colorScheme.primary
 
@@ -66,7 +78,7 @@ fun DetailScreen(
                     Box(
                         Modifier
                             .size(8.dp)
-                            .background(accent, shape = androidx.compose.foundation.shape.CircleShape)
+                            .background(accent, shape = CircleShape)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
@@ -113,15 +125,69 @@ fun DetailScreen(
                 OutlinedButton(
                     onClick = { onOpenSource(fact.sourceUrl) },
                     shape = RoundedCornerShape(50),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, accent)
+                    border = BorderStroke(1.dp, accent)
                 ) {
                     Icon(Icons.Filled.OpenInNew, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
                     Text("Tam makaleyi Wikipedia'da aç", color = accent)
                 }
 
+                Spacer(Modifier.height(24.dp))
+
+                ReactionButtons(
+                    reaction = fact.reaction,
+                    accent = accent,
+                    onReact = onReact
+                )
+
                 Spacer(Modifier.height(32.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun ReactionButtons(
+    reaction: Reaction,
+    accent: Color,
+    onReact: (Reaction) -> Unit
+) {
+    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        ReactionButton(
+            icon = Icons.Filled.ThumbUp,
+            contentDescription = "Beğen",
+            selected = reaction == Reaction.LIKE,
+            accent = accent,
+            onClick = { onReact(if (reaction == Reaction.LIKE) Reaction.NONE else Reaction.LIKE) }
+        )
+        ReactionButton(
+            icon = Icons.Filled.ThumbDown,
+            contentDescription = "Beğenme",
+            selected = reaction == Reaction.DISLIKE,
+            accent = accent,
+            onClick = { onReact(if (reaction == Reaction.DISLIKE) Reaction.NONE else Reaction.DISLIKE) }
+        )
+    }
+}
+
+@Composable
+private fun ReactionButton(
+    icon: ImageVector,
+    contentDescription: String,
+    selected: Boolean,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    val contentColor = if (selected) Color.White else accent
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(if (selected) accent else Color.Transparent)
+            .border(width = 1.dp, color = accent, shape = CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = contentDescription, tint = contentColor, modifier = Modifier.size(22.dp))
     }
 }

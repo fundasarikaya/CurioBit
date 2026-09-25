@@ -36,8 +36,31 @@ class FactRepository(
             .map { rows -> rows.map { it.toFact() } }
     }
 
+    /** Kullanıcının beğendiği (LIKE) tüm bilgiler, zaman sınırı olmadan. */
+    fun observeFavoriteFacts(): Flow<List<Fact>> {
+        return queries.selectFavorites()
+            .asFlow()
+            .mapToList(Dispatchers.Default)
+            .map { rows -> rows.map { it.toFact() } }
+    }
+
     suspend fun getFactById(id: String): Fact? = withContext(Dispatchers.Default) {
         queries.selectById(id).executeAsOneOrNull()?.toFact()
+    }
+
+    /**
+     * Bir bilgiye kullanıcı tepkisini kaydeder. "Dislike" edilen bilginin konusu,
+     * gelecekteki seçimlerde öncelik dışına atılması için ayrıca saklanır; tepki
+     * kaldırılırsa (NONE/LIKE) o konu tekrar normal önceliğe döner.
+     */
+    suspend fun setReaction(id: String, reaction: Reaction) = withContext(Dispatchers.Default) {
+        val fact = queries.selectById(id).executeAsOneOrNull() ?: return@withContext
+        queries.updateReaction(reaction.name, id)
+        if (reaction == Reaction.DISLIKE) {
+            queries.addAvoidedTopic(fact.topic)
+        } else {
+            queries.removeAvoidedTopic(fact.topic)
+        }
     }
 
     /**
@@ -54,10 +77,14 @@ class FactRepository(
         if (events.isEmpty()) return@withContext null
 
         val seenIds = queries.selectAllIds().executeAsList().toSet()
+        val avoidedTopics = queries.selectAvoidedTopics().executeAsList().toSet()
 
         val candidates = events.mapNotNull { event -> event.toFactOrNull(today.toEpochDays().toLong()) }
         val unseen = candidates.filter { it.id !in seenIds }
-        val chosen = (unseen.ifEmpty { candidates }).randomOrNull() ?: return@withContext null
+        // "Dislike" edilen konularla eşleşenler tamamen elenmez, sadece öncelik dışına atılır.
+        val (preferred, deprioritized) = (unseen.ifEmpty { candidates })
+            .partition { it.topic !in avoidedTopics }
+        val chosen = (preferred.ifEmpty { deprioritized }).randomOrNull() ?: return@withContext null
 
         queries.insertFact(
             id = chosen.id,
@@ -66,6 +93,7 @@ class FactRepository(
             fullText = chosen.fullText,
             longText = chosen.longText,
             sourceUrl = chosen.sourceUrl,
+            topic = chosen.topic,
             shownDateEpochDay = chosen.shownDateEpochDay
         )
         chosen
@@ -83,6 +111,7 @@ class FactRepository(
         // Başlık, olayla alakasız olabilen bir Wikipedia sayfa adı yerine
         // olayın kendi metninden türetilir; böylece her zaman konuyla ilgili olur.
         val displayTitle = text.truncateTo(TITLE_MAX_CHARS)
+        val topic = page?.title?.replace('_', ' ') ?: displayTitle
         val sourceUrl = page?.content_urls?.desktop?.page
             ?: page?.let { "https://tr.wikipedia.org/wiki/${it.title}" }
             ?: "https://tr.wikipedia.org/wiki/Vikipedi:Bug%C3%BCn"
@@ -96,6 +125,7 @@ class FactRepository(
             fullText = fullText,
             longText = longText,
             sourceUrl = sourceUrl,
+            topic = topic,
             shownDateEpochDay = shownDateEpochDay
         )
     }
@@ -115,6 +145,8 @@ class FactRepository(
         fullText = fullText,
         longText = longText,
         sourceUrl = sourceUrl,
+        topic = topic,
+        reaction = runCatching { Reaction.valueOf(reaction) }.getOrDefault(Reaction.NONE),
         shownDateEpochDay = shownDateEpochDay
     )
 }

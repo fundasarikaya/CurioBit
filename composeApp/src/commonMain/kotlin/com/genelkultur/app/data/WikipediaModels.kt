@@ -34,6 +34,11 @@ data class DesktopUrl(
     val page: String? = null
 )
 
+/** Kullanıcının bir bilgiye verdiği yerel tepki. */
+enum class Reaction {
+    NONE, LIKE, DISLIKE
+}
+
 /** Domain model used across the app, independent of the Wikipedia response shape. */
 data class Fact(
     val id: String,
@@ -43,5 +48,9 @@ data class Fact(
     /** Detay sayfasında gösterilen, Wikipedia sayfa özetinden gelen daha uzun anlatım. */
     val longText: String,
     val sourceUrl: String,
+    /** Bağlı olduğu Wikipedia sayfasının konusu; "dislike" sonrası benzer konuları
+     *  önceliklendirmek için kullanılır, kullanıcıya gösterilmez. */
+    val topic: String,
+    val reaction: Reaction = Reaction.NONE,
     val shownDateEpochDay: Long
 )
