@@ -70,7 +70,7 @@ class FactNotificationWorker(
             val manager = applicationContext.getSystemService(NotificationManager::class.java)
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Günlük Genel Kültür",
+                "CurioBit günlük bilgi",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "Günde 1-2 kez kısa genel kültür bilgileri"

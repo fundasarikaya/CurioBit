@@ -22,7 +22,7 @@ import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionSound
 import platform.UserNotifications.UNAuthorizationOptionBadge
 
-const val BG_REFRESH_TASK_ID = "com.genelkultur.app.refresh"
+const val BG_REFRESH_TASK_ID = "com.curiobit.app.refresh"
 private const val REFRESH_INTERVAL_SECONDS = 12.0 * 60.0 * 60.0
 
 /**

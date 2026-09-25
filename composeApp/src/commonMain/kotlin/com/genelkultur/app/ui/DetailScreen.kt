@@ -73,7 +73,7 @@ fun DetailScreen(
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Geri", tint = colors.onBackground)
                     }
                     Text(
-                        text = "Genel Kültür",
+                        text = "CurioBit",
                         style = MaterialTheme.typography.titleLarge,
                         color = colors.onBackground,
                         textAlign = TextAlign.Center,

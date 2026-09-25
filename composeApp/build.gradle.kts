@@ -78,7 +78,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.genelkultur.app"
+        applicationId = "com.curiobit.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

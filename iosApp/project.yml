@@ -1,6 +1,6 @@
 name: iosApp
 options:
-  bundleIdPrefix: com.genelkultur.app
+  bundleIdPrefix: com.curiobit.app
   deploymentTarget:
     iOS: "16.0"
   createIntermediateGroups: true
@@ -19,18 +19,19 @@ targets:
     info:
       path: iosApp/Info.plist
       properties:
-        CFBundleDisplayName: Genel Kültür
+        CFBundleDisplayName: CurioBit
         UILaunchScreen: {}
         UIBackgroundModes:
           - fetch
           - processing
         BGTaskSchedulerPermittedIdentifiers:
-          - com.genelkultur.app.refresh
+          - com.curiobit.app.refresh
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.genelkultur.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.curiobit.app
+        DEVELOPMENT_TEAM: PQ47G35QZM
         PRODUCT_NAME: iosApp
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_VERSION: "5.0"

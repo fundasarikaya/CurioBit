@@ -114,7 +114,7 @@ fun HomeScreen(
 
                 // Künye (masthead)
                 Text(
-                    text = "Genel Kültür",
+                    text = "CurioBit",
                     style = MaterialTheme.typography.displayLarge,
                     color = colors.onBackground,
                     textAlign = TextAlign.Center,
