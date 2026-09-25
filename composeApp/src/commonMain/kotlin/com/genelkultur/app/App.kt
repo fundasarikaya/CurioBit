@@ -37,7 +37,7 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
     GenelKulturTheme(useDarkTheme = isSystemInDarkTheme()) {
         when (val current = screen) {
             is Screen.Home -> HomeScreen(
-                todaysFactShortText = todaysFact?.shortText,
+                todaysFact = todaysFact,
                 onOpenTodaysFact = {
                     todaysFact?.let { screen = Screen.Detail(it.id) }
                 },

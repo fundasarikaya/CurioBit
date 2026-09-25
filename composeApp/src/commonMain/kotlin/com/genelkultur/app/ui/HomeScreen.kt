@@ -1,94 +1,214 @@
 package com.genelkultur.app.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.genelkultur.app.data.Fact
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+
+private val turkceAylar = listOf(
+    "OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN",
+    "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"
+)
 
 @Composable
 fun HomeScreen(
-    todaysFactShortText: String?,
+    todaysFact: Fact?,
     onOpenTodaysFact: () -> Unit,
     onOpenHistory: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(title = { Text("Genel Kültür") })
-        }
-    ) { padding ->
+    val accent = todaysFact?.let { accentColorFor(it.id) } ?: MaterialTheme.colorScheme.primary
+    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    val dateLabel = "${today.dayOfMonth} ${turkceAylar[today.monthNumber - 1]} ${today.year}"
+
+    Scaffold { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = Icons.Filled.Public,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
+            Spacer(Modifier.height(28.dp))
+
+            // Gazete manşeti (masthead)
+            Text(
+                text = "GENEL KÜLTÜR",
+                style = MaterialTheme.typography.headlineLarge.copy(letterSpacing = 1.sp),
+                textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(10.dp))
+            MastheadRules()
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = dateLabel,
+                style = MaterialTheme.typography.labelLarge,
+                color = accent
+            )
+
+            Spacer(Modifier.height(28.dp))
+
             Text(
                 text = "Her gün, dünya tarihinden küçük bir kırıntı",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "Günde 1-2 kez telefonuna kısa bir genel kültür bilgisi gönderiyoruz. " +
                     "Bildirime dokun, detayını ve kaynağını gör. Aynı bilgiyi iki kez göstermiyoruz.",
                 style = MaterialTheme.typography.bodyMedium,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
-            Spacer(Modifier.height(24.dp))
 
-            if (todaysFactShortText != null) {
-                Card(
-                    modifier = Modifier.fillMaxSize(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Bugünün bilgisi", style = MaterialTheme.typography.labelLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text(todaysFactShortText, style = MaterialTheme.typography.bodyLarge)
-                        Spacer(Modifier.height(12.dp))
-                        Button(onClick = onOpenTodaysFact) {
-                            Text("Detayı gör")
-                        }
-                    }
+            Spacer(Modifier.height(28.dp))
+
+            if (todaysFact != null) {
+                TodaysFactCard(
+                    fact = todaysFact,
+                    accent = accent,
+                    onOpen = onOpenTodaysFact
+                )
+                Spacer(Modifier.height(28.dp))
+            } else {
+                Spacer(Modifier.height(8.dp))
+            }
+
+            ArchiveLink(onClick = onOpenHistory)
+
+            Spacer(Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun MastheadRules() {
+    Column(
+        modifier = Modifier.width(220.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        HorizontalDivider(thickness = 2.dp, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(Modifier.height(3.dp))
+        HorizontalDivider(thickness = 1.dp, color = MaterialTheme.colorScheme.onBackground)
+    }
+}
+
+@Composable
+private fun TodaysFactCard(
+    fact: Fact,
+    accent: Color,
+    onOpen: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(18.dp))
+    ) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            Box(
+                Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(accent)
+            )
+            Column(Modifier.padding(22.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Filled.MenuBook,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "BUGÜN TARİHTE",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = accent
+                    )
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = fact.shortText,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(18.dp))
+                Button(
+                    onClick = onOpen,
+                    shape = RoundedCornerShape(50),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accent,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Devamını oku", fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(8.dp))
+                    Icon(Icons.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(16.dp))
+                }
             }
+        }
+    }
+}
 
-            OutlinedButton(onClick = onOpenHistory) {
-                Icon(Icons.Filled.History, contentDescription = null)
-                Spacer(Modifier.height(0.dp))
-                Text("  Son 7 günün bilgileri")
-            }
+@Composable
+private fun ArchiveLink(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        androidx.compose.material3.TextButton(onClick = onClick) {
+            Text(
+                text = "Tüm arşivi gör",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(Modifier.width(6.dp))
+            Icon(
+                imageVector = Icons.Filled.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onBackground
+            )
         }
     }
 }
