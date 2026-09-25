@@ -64,10 +64,21 @@ class FactRepository(
     }
 
     /**
-     * Bugün için, kullanıcının daha önce görmediği bir genel kültür bilgisi seçer,
-     * kaydeder ve döner. Wikipedia'ya ulaşılamazsa null döner.
+     * Bugün zaten bir bilgi gösterildiyse (uygulamada ya da bildirimde) en sonuncusunu
+     * döner; böylece uygulama her açıldığında manşet değişmez. Yoksa yeni bir tane seçer.
      */
-    suspend fun fetchAndPickTodaysFact(): Fact? = withContext(Dispatchers.Default) {
+    suspend fun getOrPickTodaysFact(): Fact? = withContext(Dispatchers.Default) {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        queries.selectLatestForDay(today.toEpochDays().toLong()).executeAsOneOrNull()?.toFact()
+            ?: fetchAndPickTodaysFact()
+    }
+
+    /**
+     * Bugün için, kullanıcının daha önce görmediği bir genel kültür bilgisi seçer,
+     * kaydeder ve döner. Wikipedia'ya ulaşılamazsa null döner. [requireUnseen] true
+     * ise ve bugünün tüm bilgileri görülmüşse eskisini tekrarlamak yerine null döner.
+     */
+    suspend fun fetchAndPickTodaysFact(requireUnseen: Boolean = false): Fact? = withContext(Dispatchers.Default) {
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val events = try {
             api.fetchOnThisDay(today.monthNumber, today.dayOfMonth)
@@ -81,6 +92,7 @@ class FactRepository(
 
         val candidates = events.mapNotNull { event -> event.toFactOrNull(today.toEpochDays().toLong()) }
         val unseen = candidates.filter { it.id !in seenIds }
+        if (requireUnseen && unseen.isEmpty()) return@withContext null
         // "Dislike" edilen konularla eşleşenler tamamen elenmez, sadece öncelik dışına atılır.
         val (preferred, deprioritized) = (unseen.ifEmpty { candidates })
             .partition { it.topic !in avoidedTopics }

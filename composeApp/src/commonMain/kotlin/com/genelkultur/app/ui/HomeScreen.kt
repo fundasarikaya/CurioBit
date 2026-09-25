@@ -24,9 +24,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,77 +68,143 @@ fun HomeScreen(
     archivePreview: List<Fact>,
     onOpenTodaysFact: () -> Unit,
     onOpenFact: (Fact) -> Unit,
-    onOpenHistory: () -> Unit
+    onOpenHistory: () -> Unit,
+    isRefreshing: Boolean,
+    refreshMessage: String?,
+    onRefresh: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
     val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
     val dateLabel = "${today.dayOfMonth} ${turkceAylar[today.monthNumber - 1]} ${today.year}"
     val weekday = turkceGunler[today.dayOfWeek.ordinal]
 
+    val pullState = rememberPullToRefreshState()
+
     Scaffold(containerColor = colors.background) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp)
+        // Sayfayı aşağı çekmek de "Başka bir bilgi" butonuyla aynı işi yapar.
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
+            state = pullState,
+            modifier = Modifier.fillMaxSize().padding(padding),
+            indicator = {
+                PullToRefreshDefaults.Indicator(
+                    state = pullState,
+                    isRefreshing = isRefreshing,
+                    containerColor = colors.surface,
+                    color = colors.primary,
+                    modifier = Modifier.align(Alignment.TopCenter)
+                )
+            }
         ) {
-            Spacer(Modifier.height(16.dp))
-
-            // Künye üstü şerit
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                SmallCaps("Sayı ${today.dayOfYear}")
-                SmallCaps("Günlük bilgi gazetesi")
-                SmallCaps("Fiyatı: merak")
-            }
-
-            // Künye (masthead)
-            Text(
-                text = "Genel Kültür",
-                style = MaterialTheme.typography.displayLarge,
-                color = colors.onBackground,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
-            )
-            DoubleRule()
-            Row(
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .bottomRule(colors.onBackground)
-                    .padding(vertical = 7.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp)
             ) {
-                SmallCaps(weekday, color = colors.onBackground)
-                SmallCaps(dateLabel, color = colors.onBackground)
-                SmallCaps("1–2 bilgi / gün", color = colors.onBackground)
-            }
+                Spacer(Modifier.height(16.dp))
 
-            Text(
-                text = "Her gün, dünya tarihinden küçük bir kırıntı. Bildirime dokun, detayını ve kaynağını gör.",
-                style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
-                color = colors.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp)
-            )
-
-            if (todaysFact != null) {
-                var visible by remember(todaysFact.id) { mutableStateOf(false) }
-                LaunchedEffect(todaysFact.id) { visible = true }
-                AnimatedVisibility(
-                    visible = visible,
-                    enter = fadeIn(tween(420)) + slideInVertically(tween(420)) { it / 6 }
-                ) {
-                    LeadStory(fact = todaysFact, onOpen = onOpenTodaysFact)
+                // Künye üstü şerit
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    SmallCaps("Sayı ${today.dayOfYear}")
+                    SmallCaps("Günlük bilgi gazetesi")
+                    SmallCaps("Fiyatı: merak")
                 }
-            }
 
-            if (archivePreview.isNotEmpty()) {
-                ArchiveTeasers(facts = archivePreview.take(2), onOpenFact = onOpenFact)
-            }
+                // Künye (masthead)
+                Text(
+                    text = "Genel Kültür",
+                    style = MaterialTheme.typography.displayLarge,
+                    color = colors.onBackground,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+                )
+                DoubleRule()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .bottomRule(colors.onBackground)
+                        .padding(vertical = 7.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    SmallCaps(weekday, color = colors.onBackground)
+                    SmallCaps(dateLabel, color = colors.onBackground)
+                    SmallCaps("1–2 bilgi / gün", color = colors.onBackground)
+                }
 
-            ArchiveLink(onClick = onOpenHistory)
-            Spacer(Modifier.height(24.dp))
+                Text(
+                    text = "Her gün, dünya tarihinden küçük bir kırıntı. Bildirime dokun, detayını ve kaynağını gör.",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                    color = colors.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp)
+                )
+
+                if (todaysFact != null) {
+                    var visible by remember(todaysFact.id) { mutableStateOf(false) }
+                    LaunchedEffect(todaysFact.id) { visible = true }
+                    AnimatedVisibility(
+                        visible = visible,
+                        enter = fadeIn(tween(420)) + slideInVertically(tween(420)) { it / 6 }
+                    ) {
+                        LeadStory(fact = todaysFact, onOpen = onOpenTodaysFact)
+                    }
+                    AnotherFactButton(isRefreshing = isRefreshing, onClick = onRefresh)
+                } else if (!isRefreshing) {
+                    AnotherFactButton(isRefreshing = false, onClick = onRefresh, label = "BİLGİYİ YÜKLE")
+                }
+
+                if (refreshMessage != null) {
+                    Text(
+                        text = refreshMessage,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                        color = colors.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                    )
+                }
+
+                if (archivePreview.isNotEmpty()) {
+                    ArchiveTeasers(facts = archivePreview.take(2), onOpenFact = onOpenFact)
+                }
+
+                ArchiveLink(onClick = onOpenHistory)
+                Spacer(Modifier.height(24.dp))
+            }
         }
+    }
+}
+
+/** Manşetin altında, kullanıcı isterse yeni bir bilgi getiren ikincil buton. */
+@Composable
+private fun AnotherFactButton(
+    isRefreshing: Boolean,
+    onClick: () -> Unit,
+    label: String = "BAŞKA BİR BİLGİ"
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp)
+            .heightIn(min = 44.dp)
+            .clickable(enabled = !isRefreshing, onClick = onClick),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Filled.Refresh,
+            contentDescription = null,
+            tint = colors.onBackground,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = if (isRefreshing) "GETİRİLİYOR…" else label,
+            style = MaterialTheme.typography.labelMedium,
+            color = colors.onBackground
+        )
     }
 }
 

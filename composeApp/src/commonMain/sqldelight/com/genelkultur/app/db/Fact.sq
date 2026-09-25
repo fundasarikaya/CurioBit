@@ -26,12 +26,19 @@ SELECT id FROM SeenFact;
 selectRecent:
 SELECT * FROM SeenFact
 WHERE shownDateEpochDay >= :sinceEpochDay
-ORDER BY shownDateEpochDay DESC, id DESC;
+ORDER BY shownDateEpochDay DESC, rowid DESC;
 
 selectFavorites:
 SELECT * FROM SeenFact
 WHERE reaction = 'LIKE'
-ORDER BY shownDateEpochDay DESC, id DESC;
+ORDER BY shownDateEpochDay DESC, rowid DESC;
+
+-- O gün en son gösterilen bilgi (rowid eklenme sırasını verir).
+selectLatestForDay:
+SELECT * FROM SeenFact
+WHERE shownDateEpochDay = :epochDay
+ORDER BY rowid DESC
+LIMIT 1;
 
 selectById:
 SELECT * FROM SeenFact WHERE id = ?;

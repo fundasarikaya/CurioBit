@@ -44,8 +44,11 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
     val favoriteFacts by repository.observeFavoriteFacts().collectAsState(initial = emptyList())
     val scope = rememberCoroutineScope()
 
+    var isRefreshing by remember { mutableStateOf(false) }
+    var refreshMessage by remember { mutableStateOf<String?>(null) }
+
     LaunchedEffect(Unit) {
-        todaysFact = repository.fetchAndPickTodaysFact()
+        todaysFact = repository.getOrPickTodaysFact()
     }
 
     // Ana sayfa dışındaki ekranlarda geri tuşu uygulamadan çıkmak yerine ana sayfaya döner.
@@ -69,6 +72,23 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
                         todaysFact?.let { screen = Screen.Detail(it.id) }
                     },
                     onOpenFact = { screen = Screen.Detail(it.id) },
+                    isRefreshing = isRefreshing,
+                    refreshMessage = refreshMessage,
+                    onRefresh = {
+                        if (!isRefreshing) {
+                            scope.launch {
+                                isRefreshing = true
+                                refreshMessage = null
+                                val newFact = repository.fetchAndPickTodaysFact(requireUnseen = true)
+                                if (newFact != null) {
+                                    todaysFact = newFact
+                                } else {
+                                    refreshMessage = "Şu an yeni bir bilgi getirilemedi. Bugünün bilgilerini bitirmiş olabilirsin ya da bağlantı yok."
+                                }
+                                isRefreshing = false
+                            }
+                        }
+                    },
                     onOpenHistory = { screen = Screen.History }
                 )
 
