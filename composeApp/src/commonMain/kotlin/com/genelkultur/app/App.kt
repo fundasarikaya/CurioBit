@@ -1,5 +1,10 @@
 package com.genelkultur.app
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -40,46 +45,54 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
     }
 
     GenelKulturTheme(useDarkTheme = isSystemInDarkTheme()) {
-        when (val current = screen) {
-            is Screen.Home -> HomeScreen(
-                todaysFact = todaysFact,
-                onOpenTodaysFact = {
-                    todaysFact?.let { screen = Screen.Detail(it.id) }
-                },
-                onOpenHistory = { screen = Screen.History }
-            )
+        AnimatedContent(
+            targetState = screen,
+            transitionSpec = {
+                fadeIn(tween(260)) togetherWith fadeOut(tween(160))
+            },
+            label = "screen"
+        ) { current ->
+            when (current) {
+                is Screen.Home -> HomeScreen(
+                    todaysFact = todaysFact,
+                    onOpenTodaysFact = {
+                        todaysFact?.let { screen = Screen.Detail(it.id) }
+                    },
+                    onOpenHistory = { screen = Screen.History }
+                )
 
-            is Screen.History -> HistoryScreen(
-                facts = recentFacts,
-                favoriteFacts = favoriteFacts,
-                onBack = { screen = Screen.Home },
-                onOpenFact = { screen = Screen.Detail(it.id) }
-            )
-
-            is Screen.Detail -> {
-                var fact by remember(current.factId) { mutableStateOf<Fact?>(null) }
-                LaunchedEffect(current.factId) {
-                    fact = if (todaysFact?.id == current.factId) {
-                        todaysFact
-                    } else {
-                        repository.getFactById(current.factId)
-                    }
-                }
-                DetailScreen(
-                    fact = fact,
+                is Screen.History -> HistoryScreen(
+                    facts = recentFacts,
+                    favoriteFacts = favoriteFacts,
                     onBack = { screen = Screen.Home },
-                    onOpenSource = { url -> openUrl(url) },
-                    onReact = { reaction ->
-                        val factId = current.factId
-                        scope.launch {
-                            repository.setReaction(factId, reaction)
-                            fact = fact?.copy(reaction = reaction)
-                            if (todaysFact?.id == factId) {
-                                todaysFact = todaysFact?.copy(reaction = reaction)
-                            }
+                    onOpenFact = { screen = Screen.Detail(it.id) }
+                )
+
+                is Screen.Detail -> {
+                    var fact by remember(current.factId) { mutableStateOf<Fact?>(null) }
+                    LaunchedEffect(current.factId) {
+                        fact = if (todaysFact?.id == current.factId) {
+                            todaysFact
+                        } else {
+                            repository.getFactById(current.factId)
                         }
                     }
-                )
+                    DetailScreen(
+                        fact = fact,
+                        onBack = { screen = Screen.Home },
+                        onOpenSource = { url -> openUrl(url) },
+                        onReact = { reaction ->
+                            val factId = current.factId
+                            scope.launch {
+                                repository.setReaction(factId, reaction)
+                                fact = fact?.copy(reaction = reaction)
+                                if (todaysFact?.id == factId) {
+                                    todaysFact = todaysFact?.copy(reaction = reaction)
+                                }
+                            }
+                        }
+                    )
+                }
             }
         }
     }

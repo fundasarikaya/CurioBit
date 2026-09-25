@@ -1,5 +1,11 @@
 package com.genelkultur.app.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,7 +57,6 @@ fun HistoryScreen(
     onOpenFact: (Fact) -> Unit
 ) {
     var tab by remember { mutableStateOf(ArchiveTab.RECENT) }
-    val visibleFacts = if (tab == ArchiveTab.RECENT) facts else favoriteFacts
 
     Scaffold { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
@@ -82,24 +87,32 @@ fun HistoryScreen(
                 )
             }
 
-            if (visibleFacts.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = if (tab == ArchiveTab.RECENT) "Henüz geçmiş bilgi yok" else "Henüz favori bilgi yok",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                return@Scaffold
-            }
-
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                items(visibleFacts, key = { it.id }) { fact ->
-                    ArchiveRow(fact = fact, onClick = { onOpenFact(fact) })
+            AnimatedContent(
+                targetState = tab,
+                transitionSpec = {
+                    fadeIn(tween(220)) togetherWith fadeOut(tween(140))
+                },
+                label = "archiveTab"
+            ) { currentTab ->
+                val tabFacts = if (currentTab == ArchiveTab.RECENT) facts else favoriteFacts
+                if (tabFacts.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = if (currentTab == ArchiveTab.RECENT) "Henüz geçmiş bilgi yok" else "Henüz favori bilgi yok",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(tabFacts, key = { it.id }) { fact ->
+                            ArchiveRow(fact = fact, onClick = { onOpenFact(fact) })
+                        }
+                    }
                 }
             }
         }
@@ -108,8 +121,14 @@ fun HistoryScreen(
 
 @Composable
 private fun ArchiveTabChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    val background = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surface
-    val content = if (selected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurfaceVariant
+    val background by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surface,
+        animationSpec = tween(220)
+    )
+    val content by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(220)
+    )
     Box(
         modifier = Modifier
             .background(background, RoundedCornerShape(50))

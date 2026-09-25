@@ -203,8 +203,17 @@ private fun ReactionStamp(
 ) {
     val sweep = remember { Animatable(if (selected) 1f else 0f) }
     var filled by remember { mutableStateOf(selected) }
+    var isFirstComposition by remember { mutableStateOf(true) }
 
     LaunchedEffect(selected) {
+        if (isFirstComposition) {
+            // İlk açılışta (ör. daha önce beğenilmiş bir kayda Arşiv'den girildiğinde)
+            // animasyonu oynatmadan doğrudan doğru duruma geç.
+            isFirstComposition = false
+            filled = selected
+            sweep.snapTo(if (selected) 1f else 0f)
+            return@LaunchedEffect
+        }
         if (selected) {
             filled = false
             sweep.snapTo(0f)
