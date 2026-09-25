@@ -40,6 +40,8 @@ data class Fact(
     val title: String,
     val shortText: String,
     val fullText: String,
+    /** Detay sayfasında gösterilen, Wikipedia sayfa özetinden gelen daha uzun anlatım. */
+    val longText: String,
     val sourceUrl: String,
     val shownDateEpochDay: Long
 )

@@ -95,9 +95,18 @@ fun DetailScreen(
 
                 Text(
                     text = fact.fullText,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+
+                if (fact.longText.isNotBlank() && fact.longText != fact.fullText) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = fact.longText,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 Spacer(Modifier.height(28.dp))
 
@@ -108,7 +117,7 @@ fun DetailScreen(
                 ) {
                     Icon(Icons.Filled.OpenInNew, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Kaynak: Wikipedia", color = accent)
+                    Text("Tam makaleyi Wikipedia'da aç", color = accent)
                 }
 
                 Spacer(Modifier.height(32.dp))

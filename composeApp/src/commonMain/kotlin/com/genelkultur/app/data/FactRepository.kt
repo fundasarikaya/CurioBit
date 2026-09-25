@@ -15,6 +15,8 @@ import kotlinx.datetime.todayIn
 /** Bir bildirimde gösterilecek kısa metnin karakter sınırı. */
 private const val SHORT_TEXT_MAX_CHARS = 140
 private const val TITLE_MAX_CHARS = 48
+/** Detay ekranında gösterilen uzun anlatımın karakter sınırı. */
+private const val LONG_TEXT_MAX_CHARS = 600
 private const val HISTORY_WINDOW_DAYS = 7
 
 class FactRepository(
@@ -62,6 +64,7 @@ class FactRepository(
             title = chosen.title,
             shortText = chosen.shortText,
             fullText = chosen.fullText,
+            longText = chosen.longText,
             sourceUrl = chosen.sourceUrl,
             shownDateEpochDay = chosen.shownDateEpochDay
         )
@@ -83,11 +86,15 @@ class FactRepository(
         val sourceUrl = page?.content_urls?.desktop?.page
             ?: page?.let { "https://tr.wikipedia.org/wiki/${it.title}" }
             ?: "https://tr.wikipedia.org/wiki/Vikipedi:Bug%C3%BCn"
+        // Detay ekranında bildirimdeki tek cümleden biraz daha fazlasını göstermek için
+        // Wikipedia sayfasının özetini (varsa) kullanıyoruz; tam makale kaynak linkinde.
+        val longText = page?.extract?.takeIf { it.isNotBlank() }?.truncateTo(LONG_TEXT_MAX_CHARS) ?: fullText
         return Fact(
             id = "$shownDateEpochDay-$text-$year".hashCode().toString(),
             title = displayTitle,
             shortText = fullText.truncateTo(SHORT_TEXT_MAX_CHARS),
             fullText = fullText,
+            longText = longText,
             sourceUrl = sourceUrl,
             shownDateEpochDay = shownDateEpochDay
         )
@@ -106,6 +113,7 @@ class FactRepository(
         title = title,
         shortText = shortText,
         fullText = fullText,
+        longText = longText,
         sourceUrl = sourceUrl,
         shownDateEpochDay = shownDateEpochDay
     )

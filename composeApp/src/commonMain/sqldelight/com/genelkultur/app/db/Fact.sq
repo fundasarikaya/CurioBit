@@ -3,6 +3,7 @@ CREATE TABLE SeenFact (
     title TEXT NOT NULL,
     shortText TEXT NOT NULL,
     fullText TEXT NOT NULL,
+    longText TEXT NOT NULL,
     sourceUrl TEXT NOT NULL,
     shownDateEpochDay INTEGER NOT NULL
 );
@@ -10,8 +11,8 @@ CREATE TABLE SeenFact (
 CREATE INDEX seenFact_shownDate ON SeenFact(shownDateEpochDay);
 
 insertFact:
-INSERT OR REPLACE INTO SeenFact(id, title, shortText, fullText, sourceUrl, shownDateEpochDay)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO SeenFact(id, title, shortText, fullText, longText, sourceUrl, shownDateEpochDay)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 selectAllIds:
 SELECT id FROM SeenFact;
