@@ -1,8 +1,9 @@
 package com.genelkultur.app.ui
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,18 +37,18 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.genelkultur.app.data.Fact
 import com.genelkultur.app.data.Reaction
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 
 @Composable
 fun DetailScreen(
@@ -185,7 +186,11 @@ private fun ReactionButtons(
     }
 }
 
-/** Kağıda basılmış bir mühür/damga hissi veren, köşeleri az yuvarlatılmış tepki butonu. */
+/**
+ * Köşeleri az yuvarlatılmış, "imza atılıyormuş" hissi veren tepki butonu: seçilince
+ * ince bir çizgi soldan sağa çizilir, ardından dolgu rengi bu çizgiyi yakalayıp
+ * butonun tamamını doldurur.
+ */
 @Composable
 private fun ReactionStamp(
     icon: ImageVector,
@@ -196,47 +201,62 @@ private fun ReactionStamp(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-    val contentColor = if (selected) Color.White else accent
-    val scale = remember { Animatable(1f) }
-    val rotation = remember { Animatable(0f) }
+    val sweep = remember { Animatable(if (selected) 1f else 0f) }
+    var filled by remember { mutableStateOf(selected) }
+
     LaunchedEffect(selected) {
         if (selected) {
-            coroutineScope {
-                launch {
-                    scale.snapTo(1.4f)
-                    scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 260f))
-                }
-                launch {
-                    rotation.snapTo(-12f)
-                    rotation.animateTo(0f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = 260f))
-                }
-            }
+            filled = false
+            sweep.snapTo(0f)
+            sweep.animateTo(1f, tween(durationMillis = 320, easing = FastOutSlowInEasing))
+            filled = true
         } else {
-            scale.snapTo(1f)
-            rotation.snapTo(0f)
+            sweep.snapTo(0f)
+            filled = false
         }
     }
-    Row(
+
+    val bgColor by animateColorAsState(
+        targetValue = if (filled) accent else Color.Transparent,
+        animationSpec = tween(220)
+    )
+    val contentColor by animateColorAsState(
+        targetValue = if (filled) Color.White else accent,
+        animationSpec = tween(220)
+    )
+
+    Box(
         modifier = modifier
-            .graphicsLayer {
-                scaleX = scale.value
-                scaleY = scale.value
-                rotationZ = rotation.value
-            }
             .clip(RoundedCornerShape(6.dp))
-            .background(if (selected) accent else Color.Transparent)
+            .background(bgColor)
             .border(width = 1.5.dp, color = accent, shape = RoundedCornerShape(6.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = contentDescription, tint = contentColor, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelLarge,
-            color = contentColor
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = contentDescription, tint = contentColor, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = contentColor
+            )
+        }
+
+        // İmza çizgisi: dolgu tamamlanana kadar soldan sağa çizilir.
+        if (!filled) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(sweep.value)
+                    .height(2.dp)
+                    .align(Alignment.BottomStart)
+                    .background(accent)
+            )
+        }
     }
 }
