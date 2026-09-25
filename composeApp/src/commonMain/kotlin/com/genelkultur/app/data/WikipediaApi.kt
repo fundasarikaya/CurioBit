@@ -2,17 +2,10 @@ package com.genelkultur.app.data
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
-import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.json.Json
 
 class WikipediaApi(
-    private val httpClient: HttpClient = HttpClient {
-        install(ContentNegotiation) {
-            json(Json { ignoreUnknownKeys = true })
-        }
-    }
+    private val httpClient: HttpClient = createHttpClient()
 ) {
     /**
      * Fetches "bugün" (On This Day) events for the given month/day from the

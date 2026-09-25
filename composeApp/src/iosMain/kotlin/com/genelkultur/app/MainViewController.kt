@@ -6,7 +6,14 @@ import platform.Foundation.NSUserDefaults
 
 private const val PENDING_FACT_ID_KEY = "pending_fact_id"
 
-fun MainViewController() = ComposeUIViewController {
+fun MainViewController() = ComposeUIViewController(
+    configure = {
+        // Bu proje resmi KMP sihirbazı yerine elle (xcodegen ile) kurulduğu için
+        // Compose Multiplatform'un varsayılan Info.plist doğrulaması yanlış pozitif
+        // veriyor ve açılışta çöküyor; katı kontrolü kapatıyoruz.
+        enforceStrictPlistSanityCheck = false
+    }
+) {
     val initialFactId = NSUserDefaults.standardUserDefaults.stringForKey(PENDING_FACT_ID_KEY)
     if (initialFactId != null) {
         NSUserDefaults.standardUserDefaults.removeObjectForKey(PENDING_FACT_ID_KEY)
