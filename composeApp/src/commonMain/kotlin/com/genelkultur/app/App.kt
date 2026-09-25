@@ -15,8 +15,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import com.genelkultur.app.data.DatabaseDriverFactory
+import com.genelkultur.app.data.Era
 import com.genelkultur.app.data.Fact
 import com.genelkultur.app.data.FactRepository
+import com.genelkultur.app.data.PickResult
+import com.genelkultur.app.data.year
 import com.genelkultur.app.data.Reaction
 import com.genelkultur.app.ui.DetailScreen
 import com.genelkultur.app.ui.GenelKulturTheme
@@ -46,9 +49,32 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
 
     var isRefreshing by remember { mutableStateOf(false) }
     var refreshMessage by remember { mutableStateOf<String?>(null) }
+    var era by remember { mutableStateOf(Era.ALL) }
 
     LaunchedEffect(Unit) {
+        era = repository.getEra()
         todaysFact = repository.getOrPickTodaysFact()
+    }
+
+    /** Yeni bilgi isteğini çalıştırır ve sonucu ana sayfaya yansıtır. */
+    fun runPick(showNoneLeft: Boolean = true, request: suspend () -> PickResult) {
+        if (isRefreshing) return
+        scope.launch {
+            isRefreshing = true
+            refreshMessage = null
+            when (val result = request()) {
+                is PickResult.Picked -> todaysFact = result.fact
+                PickResult.NoneLeft -> if (showNoneLeft) {
+                    refreshMessage = if (era == Era.ALL) {
+                        "Bugün için gösterilecek başka bilgi yok. Yarın yeni bilgiler gelecek."
+                    } else {
+                        "Bugün için ${era.label} döneminden gösterilecek başka bilgi yok. Başka bir dönem seçebilirsin."
+                    }
+                }
+                PickResult.Offline -> refreshMessage = "Vikipedi'ye ulaşılamadı. Bağlantını kontrol edip tekrar dene."
+            }
+            isRefreshing = false
+        }
     }
 
     // Ana sayfa dışındaki ekranlarda geri tuşu uygulamadan çıkmak yerine ana sayfaya döner.
@@ -74,18 +100,19 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
                     onOpenFact = { screen = Screen.Detail(it.id) },
                     isRefreshing = isRefreshing,
                     refreshMessage = refreshMessage,
-                    onRefresh = {
-                        if (!isRefreshing) {
+                    onRefresh = { runPick { repository.pickAnotherFact() } },
+                    era = era,
+                    onEraChange = { selected ->
+                        if (selected != era && !isRefreshing) {
+                            era = selected
+                            refreshMessage = null
                             scope.launch {
-                                isRefreshing = true
-                                refreshMessage = null
-                                val newFact = repository.fetchAndPickTodaysFact(requireUnseen = true)
-                                if (newFact != null) {
-                                    todaysFact = newFact
-                                } else {
-                                    refreshMessage = "Şu an yeni bir bilgi getirilemedi. Bugünün bilgilerini bitirmiş olabilirsin ya da bağlantı yok."
+                                repository.setEra(selected)
+                                // Ekrandaki bilgi yeni dönemin dışındaysa o dönemden bir bilgi getir.
+                                if (!selected.contains(todaysFact?.year)) {
+                                    // Dönemde hiç bilgi yoksa ana sayfadaki not zaten bunu söylüyor.
+                                    runPick(showNoneLeft = false) { repository.pickForEra() }
                                 }
-                                isRefreshing = false
                             }
                         }
                     },

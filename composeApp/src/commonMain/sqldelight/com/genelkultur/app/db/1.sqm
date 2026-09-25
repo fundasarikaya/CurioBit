@@ -1,0 +1,5 @@
+-- Sürüm 1 → 2: kullanıcı tercihleri tablosu.
+CREATE TABLE AppSetting (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);

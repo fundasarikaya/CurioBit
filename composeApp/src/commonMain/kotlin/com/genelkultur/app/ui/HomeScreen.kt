@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -48,7 +49,9 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.genelkultur.app.data.Era
 import com.genelkultur.app.data.Fact
+import com.genelkultur.app.data.year
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -71,7 +74,9 @@ fun HomeScreen(
     onOpenHistory: () -> Unit,
     isRefreshing: Boolean,
     refreshMessage: String?,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    era: Era,
+    onEraChange: (Era) -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
     val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
@@ -141,6 +146,17 @@ fun HomeScreen(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 16.dp)
                 )
 
+                EraSelector(selected = era, enabled = !isRefreshing, onSelect = onEraChange)
+
+                if (todaysFact != null && !era.contains(todaysFact.year)) {
+                    Text(
+                        text = "Bugün için ${era.label} döneminden bilgi yok; başka bir dönemden gösteriliyor.",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                        color = colors.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)
+                    )
+                }
+
                 if (todaysFact != null) {
                     var visible by remember(todaysFact.id) { mutableStateOf(false) }
                     LaunchedEffect(todaysFact.id) { visible = true }
@@ -171,6 +187,47 @@ fun HomeScreen(
 
                 ArchiveLink(onClick = onOpenHistory)
                 Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+/** Bilgilerin hangi yıllardan geleceğini seçtiren, gazete bölüm başlığı tarzı şerit. */
+@Composable
+private fun EraSelector(selected: Era, enabled: Boolean, onSelect: (Era) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("DÖNEM", style = MaterialTheme.typography.labelMedium, color = colors.onBackground)
+            Spacer(Modifier.width(10.dp))
+            Box(Modifier.weight(1f).height(1.dp).background(colors.outline))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Era.entries.forEach { era ->
+                val isSelected = era == selected
+                Column(
+                    modifier = Modifier
+                        .width(IntrinsicSize.Max)
+                        .clickable(enabled = enabled) { onSelect(era) }
+                ) {
+                    Box(Modifier.height(42.dp), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = era.shortLabel.trUppercase(),
+                            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 1.sp),
+                            color = if (isSelected) colors.primary else colors.onSurfaceVariant,
+                            maxLines = 1
+                        )
+                    }
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(2.dp)
+                            .background(if (isSelected) colors.primary else Color.Transparent)
+                    )
+                }
             }
         }
     }

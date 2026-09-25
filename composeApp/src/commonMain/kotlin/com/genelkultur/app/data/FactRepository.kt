@@ -18,6 +18,7 @@ private const val TITLE_MAX_CHARS = 48
 /** Detay ekranında gösterilen uzun anlatımın karakter sınırı. */
 private const val LONG_TEXT_MAX_CHARS = 600
 private const val HISTORY_WINDOW_DAYS = 7
+private const val ERA_KEY = "era"
 
 class FactRepository(
     driverFactory: DatabaseDriverFactory,
@@ -25,6 +26,7 @@ class FactRepository(
 ) {
     private val database = AppDatabase(driverFactory.createDriver())
     private val queries = database.factQueries
+    private val settings = database.settingQueries
 
     /** Son 7 günde kullanıcıya gösterilmiş bilgiler, tarihe göre en yeniden eskiye. */
     fun observeRecentFacts(): Flow<List<Fact>> {
@@ -73,43 +75,79 @@ class FactRepository(
             ?: fetchAndPickTodaysFact()
     }
 
-    /**
-     * Bugün için, kullanıcının daha önce görmediği bir genel kültür bilgisi seçer,
-     * kaydeder ve döner. Wikipedia'ya ulaşılamazsa null döner. [requireUnseen] true
-     * ise ve bugünün tüm bilgileri görülmüşse eskisini tekrarlamak yerine null döner.
-     */
-    suspend fun fetchAndPickTodaysFact(requireUnseen: Boolean = false): Fact? = withContext(Dispatchers.Default) {
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val events = try {
-            api.fetchOnThisDay(today.monthNumber, today.dayOfMonth)
-        } catch (e: Exception) {
-            return@withContext null
-        }
-        if (events.isEmpty()) return@withContext null
-
-        val seenIds = queries.selectAllIds().executeAsList().toSet()
-        val avoidedTopics = queries.selectAvoidedTopics().executeAsList().toSet()
-
-        val candidates = events.mapNotNull { event -> event.toFactOrNull(today.toEpochDays().toLong()) }
-        val unseen = candidates.filter { it.id !in seenIds }
-        if (requireUnseen && unseen.isEmpty()) return@withContext null
-        // "Dislike" edilen konularla eşleşenler tamamen elenmez, sadece öncelik dışına atılır.
-        val (preferred, deprioritized) = (unseen.ifEmpty { candidates })
-            .partition { it.topic !in avoidedTopics }
-        val chosen = (preferred.ifEmpty { deprioritized }).randomOrNull() ?: return@withContext null
-
-        queries.insertFact(
-            id = chosen.id,
-            title = chosen.title,
-            shortText = chosen.shortText,
-            fullText = chosen.fullText,
-            longText = chosen.longText,
-            sourceUrl = chosen.sourceUrl,
-            topic = chosen.topic,
-            shownDateEpochDay = chosen.shownDateEpochDay
-        )
-        chosen
+    /** Kullanıcının seçtiği dönem; seçim yapılmadıysa tüm yıllar. */
+    suspend fun getEra(): Era = withContext(Dispatchers.Default) {
+        val saved = settings.selectSetting(ERA_KEY).executeAsOneOrNull()
+        Era.entries.firstOrNull { it.name == saved } ?: Era.ALL
     }
+
+    suspend fun setEra(era: Era) = withContext(Dispatchers.Default) {
+        settings.upsertSetting(ERA_KEY, era.name)
+    }
+
+    /**
+     * Bugün için, kullanıcının daha önce görmediği bir bilgi seçer, kaydeder ve döner.
+     * Uygulama açılışında ve bildirimlerde kullanılır: seçilen dönemde bugüne ait bilgi
+     * yoksa boş kalmamak için başka bir dönemden seçer. Vikipedi'ye ulaşılamazsa null.
+     */
+    suspend fun fetchAndPickTodaysFact(): Fact? =
+        (pick(requireUnseen = false, strictEra = false) as? PickResult.Picked)?.fact
+
+    /**
+     * Kullanıcı "başka bir bilgi" istediğinde: yalnızca seçilen dönemden ve daha önce
+     * gösterilmemiş bir bilgi seçer.
+     */
+    suspend fun pickAnotherFact(): PickResult = pick(requireUnseen = true, strictEra = true)
+
+    /**
+     * Dönem değiştiğinde: seçilen dönemden bir bilgi getirir; gösterilmemiş kalmadıysa
+     * o dönemden daha önce gösterilmiş olanı tekrar gösterebilir.
+     */
+    suspend fun pickForEra(): PickResult = pick(requireUnseen = false, strictEra = true)
+
+    private suspend fun pick(requireUnseen: Boolean, strictEra: Boolean): PickResult =
+        withContext(Dispatchers.Default) {
+            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            val events = try {
+                api.fetchOnThisDay(today.monthNumber, today.dayOfMonth)
+            } catch (e: Exception) {
+                return@withContext PickResult.Offline
+            }
+            val era = getEra()
+            val seenIds = queries.selectAllIds().executeAsList().toSet()
+            val avoidedTopics = queries.selectAvoidedTopics().executeAsList().toSet()
+
+            val candidates = events.mapNotNull { event -> event.toFactOrNull(today.toEpochDays().toLong()) }
+            val unseen = candidates.filter { it.id !in seenIds }
+            val pool = when {
+                unseen.isNotEmpty() -> unseen
+                requireUnseen -> return@withContext PickResult.NoneLeft
+                else -> candidates
+            }
+            // Önce seçilen dönemdekiler; hiç yoksa ya dur (strictEra) ya da tüm dönemlere dön.
+            val inEra = pool.filter { era.contains(yearOf(it.fullText)) }
+            val eraPool = when {
+                inEra.isNotEmpty() -> inEra
+                strictEra -> return@withContext PickResult.NoneLeft
+                else -> pool
+            }
+            // "Dislike" edilen konularla eşleşenler tamamen elenmez, sadece öncelik dışına atılır.
+            val (preferred, deprioritized) = eraPool.partition { it.topic !in avoidedTopics }
+            val chosen = (preferred.ifEmpty { deprioritized }).randomOrNull()
+                ?: return@withContext PickResult.NoneLeft
+
+            queries.insertFact(
+                id = chosen.id,
+                title = chosen.title,
+                shortText = chosen.shortText,
+                fullText = chosen.fullText,
+                longText = chosen.longText,
+                sourceUrl = chosen.sourceUrl,
+                topic = chosen.topic,
+                shownDateEpochDay = chosen.shownDateEpochDay
+            )
+            PickResult.Picked(chosen)
+        }
 
     suspend fun cleanupOlderThan(epochDay: Long) = withContext(Dispatchers.Default) {
         queries.deleteOlderThan(epochDay)

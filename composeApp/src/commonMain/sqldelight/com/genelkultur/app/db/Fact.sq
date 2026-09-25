@@ -43,8 +43,9 @@ LIMIT 1;
 selectById:
 SELECT * FROM SeenFact WHERE id = ?;
 
+-- Beğenilen (LIKE) bilgiler favorilerde kalıcıdır; temizlikte silinmez.
 deleteOlderThan:
-DELETE FROM SeenFact WHERE shownDateEpochDay < :epochDay;
+DELETE FROM SeenFact WHERE shownDateEpochDay < :epochDay AND reaction != 'LIKE';
 
 updateReaction:
 UPDATE SeenFact SET reaction = :reaction WHERE id = :id;

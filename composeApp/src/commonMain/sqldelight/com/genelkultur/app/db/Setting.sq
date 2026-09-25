@@ -1,0 +1,11 @@
+-- Kullanıcı tercihleri (ör. seçilen dönem), anahtar-değer olarak.
+CREATE TABLE AppSetting (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+selectSetting:
+SELECT value FROM AppSetting WHERE key = ?;
+
+upsertSetting:
+INSERT OR REPLACE INTO AppSetting(key, value) VALUES (?, ?);
