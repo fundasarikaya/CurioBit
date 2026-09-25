@@ -66,3 +66,8 @@ metinleri [`LICENSES/fonts`](LICENSES/fonts) klasöründedir.
 | Old Standard TT | Künye ve manşetler |
 | Libre Caslon Text | Gövde metni |
 | Libre Franklin | Etiketler |
+
+## Lisans
+
+Kod [MIT lisansı](LICENSE) ile paylaşılmaktadır. Fontlar kendi lisanslarına
+(SIL OFL 1.1) tabidir.
