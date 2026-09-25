@@ -28,6 +28,10 @@ import kotlinx.coroutines.launch
 /** Platforma özel bir link açıcı (tarayıcı) sağlar. */
 expect fun openUrl(url: String)
 
+/** Sistem geri tuşunu (Android) yakalar; iOS'ta etkisizdir. */
+@Composable
+expect fun PlatformBackHandler(enabled: Boolean, onBack: () -> Unit)
+
 @Composable
 fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
     val repository = remember { FactRepository(driverFactory) }
@@ -44,6 +48,11 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
         todaysFact = repository.fetchAndPickTodaysFact()
     }
 
+    // Ana sayfa dışındaki ekranlarda geri tuşu uygulamadan çıkmak yerine ana sayfaya döner.
+    PlatformBackHandler(enabled = screen !is Screen.Home) {
+        screen = Screen.Home
+    }
+
     GenelKulturTheme(useDarkTheme = isSystemInDarkTheme()) {
         AnimatedContent(
             targetState = screen,
@@ -55,9 +64,11 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
             when (current) {
                 is Screen.Home -> HomeScreen(
                     todaysFact = todaysFact,
+                    archivePreview = recentFacts.filter { it.id != todaysFact?.id },
                     onOpenTodaysFact = {
                         todaysFact?.let { screen = Screen.Detail(it.id) }
                     },
+                    onOpenFact = { screen = Screen.Detail(it.id) },
                     onOpenHistory = { screen = Screen.History }
                 )
 

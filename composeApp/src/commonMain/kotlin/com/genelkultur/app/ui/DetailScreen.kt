@@ -4,7 +4,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,8 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -32,7 +29,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,10 +39,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.genelkultur.app.data.Fact
 import com.genelkultur.app.data.Reaction
 
@@ -57,95 +60,100 @@ fun DetailScreen(
     onOpenSource: (String) -> Unit,
     onReact: (Reaction) -> Unit
 ) {
-    val accent = fact?.let { accentColorFor(it.id) } ?: MaterialTheme.colorScheme.primary
+    val colors = MaterialTheme.colorScheme
 
-    Scaffold { padding ->
+    Scaffold(containerColor = colors.background) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 4.dp, top = 4.dp, end = 20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Filled.ArrowBack, contentDescription = "Geri")
+            Column(Modifier.padding(horizontal = 20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "Geri", tint = colors.onBackground)
+                    }
+                    Text(
+                        text = "Genel Kültür",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = colors.onBackground,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(48.dp))
                 }
+                DoubleRule()
             }
 
             if (fact == null) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = accent)
+                    CircularProgressIndicator(color = colors.primary)
                 }
                 return@Scaffold
             }
+
+            val (year, headline) = splitYear(fact.fullText)
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 28.dp)
+                    .padding(horizontal = 20.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        Modifier
-                            .size(8.dp)
-                            .background(accent, shape = CircleShape)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "TARİHTE BUGÜN",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = accent
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("TARİHTE BUGÜN", style = MaterialTheme.typography.labelMedium, color = colors.primary)
+                    if (year != null) {
+                        Text(year, style = MaterialTheme.typography.labelMedium, color = colors.primary)
+                    }
                 }
 
-                Spacer(Modifier.height(14.dp))
-
                 Text(
-                    text = fact.title,
+                    text = headline,
                     style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = colors.onBackground
                 )
-
-                Spacer(Modifier.height(18.dp))
-                Box(
-                    Modifier
-                        .width(48.dp)
-                        .height(3.dp)
-                        .background(accent, RoundedCornerShape(2.dp))
-                )
-                Spacer(Modifier.height(18.dp))
-
+                Spacer(Modifier.height(10.dp))
                 Text(
-                    text = fact.fullText,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "KAYNAK: VİKİPEDİ",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.onSurfaceVariant,
+                    maxLines = 1
                 )
+                Spacer(Modifier.height(12.dp))
+                Box(Modifier.fillMaxWidth().height(1.dp).background(colors.outline))
 
                 if (fact.longText.isNotBlank() && fact.longText != fact.fullText) {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(14.dp))
                     Text(
-                        text = fact.longText,
+                        text = withInitial(fact.longText, colors.primary, displayFamily()),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = colors.onBackground,
+                        textAlign = TextAlign.Start
                     )
                 }
 
                 Spacer(Modifier.height(28.dp))
 
-                OutlinedButton(
-                    onClick = { onOpenSource(fact.sourceUrl) },
-                    shape = RoundedCornerShape(50),
-                    border = BorderStroke(1.dp, accent)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .border(1.5.dp, colors.onBackground)
+                        .clickable { onOpenSource(fact.sourceUrl) },
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Filled.OpenInNew, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Tam makaleyi Wikipedia'da aç", color = accent)
+                    Icon(Icons.Filled.OpenInNew, contentDescription = null, tint = colors.onBackground, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Text("TAM MAKALEYİ VİKİPEDİ'DE AÇ", style = MaterialTheme.typography.labelMedium, color = colors.onBackground)
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
 
                 ReactionButtons(
                     reaction = fact.reaction,
-                    accent = accent,
                     onReact = onReact
                 )
 
@@ -155,23 +163,32 @@ fun DetailScreen(
     }
 }
 
+/** Gazete girişi gibi ilk harfi büyük ve vurgu renginde yazar. */
+private fun withInitial(text: String, color: Color, family: FontFamily) = buildAnnotatedString {
+    if (text.isEmpty()) return@buildAnnotatedString
+    withStyle(SpanStyle(fontSize = 34.sp, fontWeight = FontWeight.Bold, color = color, fontFamily = family)) {
+        append(text.first())
+    }
+    append(text.drop(1))
+}
+
 @Composable
 private fun ReactionButtons(
     reaction: Reaction,
-    accent: Color,
     onReact: (Reaction) -> Unit
 ) {
+    val colors = MaterialTheme.colorScheme
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         ReactionStamp(
             icon = Icons.Filled.ThumbUp,
             label = "BEĞENDİM",
             contentDescription = "Beğen",
             selected = reaction == Reaction.LIKE,
-            accent = accent,
-            modifier = Modifier.weight(1f),
+            accent = colors.primary,
+            modifier = Modifier.weight(1f).rotate(-1.2f),
             onClick = { onReact(if (reaction == Reaction.LIKE) Reaction.NONE else Reaction.LIKE) }
         )
         ReactionStamp(
@@ -179,15 +196,15 @@ private fun ReactionButtons(
             label = "BEĞENMEDİM",
             contentDescription = "Beğenme",
             selected = reaction == Reaction.DISLIKE,
-            accent = accent,
-            modifier = Modifier.weight(1f),
+            accent = colors.onSurfaceVariant,
+            modifier = Modifier.weight(1f).rotate(0.8f),
             onClick = { onReact(if (reaction == Reaction.DISLIKE) Reaction.NONE else Reaction.DISLIKE) }
         )
     }
 }
 
 /**
- * Köşeleri az yuvarlatılmış, "imza atılıyormuş" hissi veren tepki butonu: seçilince
+ * Keskin köşeli, çift çerçeveli "imza atılıyormuş" hissi veren tepki butonu: seçilince
  * ince bir çizgi soldan sağa çizilir, ardından dolgu rengi bu çizgiyi yakalayıp
  * butonun tamamını doldurur.
  */
@@ -230,21 +247,23 @@ private fun ReactionStamp(
         animationSpec = tween(220)
     )
     val contentColor by animateColorAsState(
-        targetValue = if (filled) Color.White else accent,
+        targetValue = if (filled) MaterialTheme.colorScheme.background else accent,
         animationSpec = tween(220)
     )
 
+    // Damga görünümü: dış kalın çerçeve, içte ince ikinci çerçeve.
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
             .background(bgColor)
-            .border(width = 1.5.dp, color = accent, shape = RoundedCornerShape(6.dp))
+            .border(width = 2.dp, color = accent)
             .clickable(onClick = onClick)
+            .padding(3.dp)
+            .border(width = 1.dp, color = if (filled) contentColor else accent)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
+                .padding(vertical = 11.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
