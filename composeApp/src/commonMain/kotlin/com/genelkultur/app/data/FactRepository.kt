@@ -19,6 +19,7 @@ private const val TITLE_MAX_CHARS = 48
 private const val LONG_TEXT_MAX_CHARS = 600
 private const val HISTORY_WINDOW_DAYS = 7
 private const val ERA_KEY = "era"
+private const val THEME_KEY = "theme"
 private val KIND_WEIGHTS = mapOf(EntryKind.EVENT to 2, EntryKind.BIRTH to 1, EntryKind.DEATH to 1)
 
 class FactRepository(
@@ -74,6 +75,19 @@ class FactRepository(
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         queries.selectLatestForDay(today.toEpochDays().toLong()).executeAsOneOrNull()?.toFact()
             ?: fetchAndPickTodaysFact()
+    }
+
+    /**
+     * Kullanıcının tema tercihi. Açılışta ekranın bir an yanlış temayla görünmemesi
+     * için eşzamanlı okunur; tek satırlık küçük bir sorgudur.
+     */
+    fun getThemeMode(): ThemeMode {
+        val saved = settings.selectSetting(THEME_KEY).executeAsOneOrNull()
+        return ThemeMode.entries.firstOrNull { it.name == saved } ?: ThemeMode.SYSTEM
+    }
+
+    suspend fun setThemeMode(mode: ThemeMode) = withContext(Dispatchers.Default) {
+        settings.upsertSetting(THEME_KEY, mode.name)
     }
 
     /** Kullanıcının seçtiği dönem; seçim yapılmadıysa tüm yıllar. */

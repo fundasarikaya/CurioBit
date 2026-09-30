@@ -6,6 +6,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,6 +30,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -42,6 +49,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -51,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.genelkultur.app.data.Era
 import com.genelkultur.app.data.Fact
+import com.genelkultur.app.data.ThemeMode
 import com.genelkultur.app.data.year
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -76,7 +87,9 @@ fun HomeScreen(
     refreshMessage: String?,
     onRefresh: () -> Unit,
     era: Era,
-    onEraChange: (Era) -> Unit
+    onEraChange: (Era) -> Unit,
+    isDarkTheme: Boolean,
+    onThemeModeChange: (ThemeMode) -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
     val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
@@ -117,14 +130,21 @@ fun HomeScreen(
                     SmallCaps("Fiyatı: merak")
                 }
 
-                // Künye (masthead)
-                Text(
-                    text = "CurioBit",
-                    style = MaterialTheme.typography.displayLarge,
-                    color = colors.onBackground,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
-                )
+                // Künye (masthead); sağında tema seçimi
+                Box(Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "CurioBit",
+                        style = MaterialTheme.typography.displayLarge,
+                        color = colors.onBackground,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp)
+                    )
+                    ThemeSwitch(
+                        isDark = isDarkTheme,
+                        onToggle = { onThemeModeChange(if (isDarkTheme) ThemeMode.LIGHT else ThemeMode.DARK) },
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    )
+                }
                 DoubleRule()
                 Row(
                     modifier = Modifier
@@ -187,6 +207,61 @@ fun HomeScreen(
 
                 ArchiveLink(onClick = onOpenHistory)
                 Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+/**
+ * Güneş ve ay arasında kayan minik tema anahtarı. Kullanıcı hiç dokunmadıysa telefonun
+ * o anki temasını gösterir; dokununca açık ya da koyu tema sabitlenir.
+ */
+@Composable
+private fun ThemeSwitch(isDark: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    val thumbOffset by animateDpAsState(
+        targetValue = if (isDark) 22.dp else 0.dp,
+        animationSpec = tween(220),
+        label = "themeThumb"
+    )
+    // 44 dp yüksekliğinde dokunma alanı; görünen anahtar 48×26 dp.
+    Box(
+        modifier = modifier
+            .height(44.dp)
+            .toggleable(value = isDark, role = Role.Switch, onValueChange = { onToggle() })
+            .semantics { contentDescription = "Koyu tema" },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            Modifier
+                .width(48.dp)
+                .height(26.dp)
+                .border(1.5.dp, colors.onBackground, CircleShape)
+                .padding(2.dp)
+        ) {
+            // Arkadaki soluk simgeler: solda güneş, sağda ay.
+            Row(
+                Modifier.matchParentSize().padding(horizontal = 3.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Outlined.LightMode, null, tint = colors.onSurfaceVariant, modifier = Modifier.size(13.dp))
+                Icon(Icons.Outlined.DarkMode, null, tint = colors.onSurfaceVariant, modifier = Modifier.size(13.dp))
+            }
+            // Kayan düğme; üstünde seçili temanın simgesi.
+            Box(
+                Modifier
+                    .offset(x = thumbOffset)
+                    .size(20.dp)
+                    .background(colors.primary, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isDark) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
+                    contentDescription = null,
+                    tint = colors.onPrimary,
+                    modifier = Modifier.size(13.dp)
+                )
             }
         }
     }

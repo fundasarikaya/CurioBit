@@ -19,6 +19,7 @@ import com.genelkultur.app.data.Era
 import com.genelkultur.app.data.Fact
 import com.genelkultur.app.data.FactRepository
 import com.genelkultur.app.data.PickResult
+import com.genelkultur.app.data.ThemeMode
 import com.genelkultur.app.data.year
 import com.genelkultur.app.data.Reaction
 import com.genelkultur.app.ui.DetailScreen
@@ -30,6 +31,10 @@ import kotlinx.coroutines.launch
 
 /** Platforma özel bir link açıcı (tarayıcı) sağlar. */
 expect fun openUrl(url: String)
+
+/** Durum ve gezinme çubuğu simgelerini uygulamanın temasına göre açık/koyu yapar. */
+@Composable
+expect fun PlatformSystemBars(mode: ThemeMode, darkTheme: Boolean)
 
 /** Sistem geri tuşunu (Android) yakalar; iOS'ta etkisizdir. */
 @Composable
@@ -50,6 +55,13 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
     var isRefreshing by remember { mutableStateOf(false) }
     var refreshMessage by remember { mutableStateOf<String?>(null) }
     var era by remember { mutableStateOf(Era.ALL) }
+    var themeMode by remember { mutableStateOf(repository.getThemeMode()) }
+    val useDarkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    PlatformSystemBars(mode = themeMode, darkTheme = useDarkTheme)
 
     LaunchedEffect(Unit) {
         era = repository.getEra()
@@ -82,7 +94,7 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
         screen = Screen.Home
     }
 
-    GenelKulturTheme(useDarkTheme = isSystemInDarkTheme()) {
+    GenelKulturTheme(useDarkTheme = useDarkTheme) {
         AnimatedContent(
             targetState = screen,
             transitionSpec = {
@@ -102,6 +114,11 @@ fun App(driverFactory: DatabaseDriverFactory, initialFactId: String? = null) {
                     refreshMessage = refreshMessage,
                     onRefresh = { runPick { repository.pickAnotherFact() } },
                     era = era,
+                    isDarkTheme = useDarkTheme,
+                    onThemeModeChange = { mode ->
+                        themeMode = mode
+                        scope.launch { repository.setThemeMode(mode) }
+                    },
                     onEraChange = { selected ->
                         if (selected != era && !isRefreshing) {
                             era = selected
